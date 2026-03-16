@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>GD AI — Éditeur de Niveau</title>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{background:#040411;color:#c8d8ff;font-family:'Courier New',monospace;
+         display:flex;flex-direction:column;align-items:center;padding:14px;
+         min-height:100vh;user-select:none}
+    h1{font-size:.9rem;letter-spacing:4px;color:#44aaff;margin-bottom:10px;
+       text-shadow:0 0 12px #2266ff}
+    #toolbar{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;
+             justify-content:center;margin-bottom:8px;max-width:900px;width:100%}
+    .tg{display:flex;flex-direction:column;align-items:center;gap:4px}
+    .tl{font-size:9px;color:rgba(150,170,220,.6);letter-spacing:2px;text-transform:uppercase}
+    .br{display:flex;gap:4px}
+    button{background:rgba(30,40,90,.8);color:#88aaff;border:1px solid rgba(68,100,200,.4);
+           border-radius:4px;padding:5px 11px;font-family:'Courier New',monospace;
+           font-size:11px;cursor:pointer;transition:all .15s;letter-spacing:1px;white-space:nowrap}
+    button:hover{background:rgba(50,70,150,.9);border-color:rgba(100,160,255,.7);color:#ccddff}
+    button.active{background:rgba(30,80,180,.9);border-color:#44aaff;color:#fff;
+                  box-shadow:0 0 10px rgba(68,170,255,.4)}
+    button.spike-inv-btn.active{background:rgba(80,40,10,.9);border-color:#ff8800;color:#ff8800;
+                  box-shadow:0 0 10px rgba(255,136,0,.4)}
+    button.danger{color:#ff7788;border-color:rgba(200,60,80,.4)}
+    button.danger:hover{background:rgba(100,20,30,.9);border-color:#ff4455}
+    button.success{color:#44ffaa;border-color:rgba(68,200,120,.4)}
+    button.success:hover{background:rgba(20,80,50,.9);border-color:#44ffaa}
+    input[type=text],input[type=number]{background:rgba(20,30,70,.8);color:#88aaff;
+      border:1px solid rgba(68,100,200,.4);border-radius:4px;
+      padding:5px 8px;font-family:'Courier New',monospace;font-size:11px}
+    input[type=text]:focus,input[type=number]:focus{outline:none;border-color:rgba(100,160,255,.7)}
+
+    /* Canvas wrapper */
+    #canvasWrap{position:relative;margin-bottom:6px}
+    #editorCanvas{border:1px solid rgba(68,170,255,.2);border-radius:4px;
+                  display:block;cursor:crosshair;
+                  box-shadow:0 0 24px rgba(68,100,255,.1)}
+
+    /* Nav overlay buttons */
+    .nav-btn{position:absolute;background:rgba(10,15,50,.7);
+             border:1px solid rgba(68,100,200,.3);border-radius:3px;
+             color:rgba(100,150,255,.7);font-size:14px;cursor:pointer;
+             padding:3px 7px;transition:all .15s;z-index:10}
+    .nav-btn:hover{background:rgba(30,50,150,.8);color:#fff}
+    #navUp   {top:2px;left:50%;transform:translateX(-50%)}
+    #navDown {bottom:20px;left:50%;transform:translateX(-50%)}
+    #navLeft {top:50%;left:0px;transform:translateY(-50%)}
+    #navRight{top:50%;right:2px;transform:translateY(-50%)}
+
+    #statusBar{display:flex;justify-content:space-between;align-items:center;
+               width:100%;max-width:900px;margin:2px 0 8px;
+               font-size:10px;color:rgba(100,130,200,.55);letter-spacing:1px}
+    #levelsPanel{margin-top:10px;width:100%;max-width:900px;
+                 background:rgba(10,15,40,.7);border:1px solid rgba(68,100,200,.2);
+                 border-radius:6px;padding:10px 14px}
+    #levelsPanel h3{font-size:10px;letter-spacing:3px;color:rgba(100,150,255,.65);margin-bottom:7px}
+    #levelList{display:flex;flex-wrap:wrap;gap:5px}
+    .lchip{background:rgba(20,40,100,.8);border:1px solid rgba(68,100,200,.3);
+           border-radius:3px;padding:3px 9px;font-size:11px;color:#88aaff;
+           cursor:pointer;display:flex;gap:6px;align-items:center;transition:all .15s}
+    .lchip:hover{border-color:#44aaff;color:#fff}
+    .lchip .del{color:#ff5566;font-size:10px}
+    .nav-links{display:flex;gap:14px;margin-top:12px}
+    .nav-links a{color:rgba(100,150,255,.5);text-decoration:none;font-size:11px;
+                 letter-spacing:2px;border-bottom:1px solid rgba(100,150,255,.2);transition:color .2s}
+    .nav-links a:hover{color:#88aaff}
+    #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(60px);
+           background:rgba(20,40,100,.95);border:1px solid rgba(68,170,255,.4);border-radius:4px;
+           padding:7px 18px;font-size:12px;color:#88ccff;letter-spacing:1px;
+           transition:transform .3s;pointer-events:none}
+    #toast.show{transform:translateX(-50%) translateY(0)}
+
+    /* Légende outils */
+    #legend{display:flex;gap:12px;margin-top:6px;font-size:10px;color:rgba(150,170,220,.5)}
+    .leg{display:flex;align-items:center;gap:5px}
+    .leg-icon{width:14px;height:14px;border-radius:2px;display:inline-block}
+  </style>
+</head>
+<body>
+  <h1>✏ ÉDITEUR DE NIVEAU</h1>
+
+  <div id="toolbar">
+    <!-- Outils de dessin -->
+    <div class="tg">
+      <span class="tl">Outil</span>
+      <div class="br">
+        <button id="tBlock"    onclick="setTool('block')"     class="active">⬜ Bloc</button>
+        <button id="tSpike"    onclick="setTool('spike')"           >▲ Pique ↑</button>
+        <button id="tSpikeInv" onclick="setTool('spike_inv')"  class="spike-inv-btn">▼ Pique ↓</button>
+        <button id="tErase"    onclick="setTool('erase')"           >✕ Effacer</button>
+      </div>
+    </div>
+
+    <!-- Nom + sauvegarde -->
+    <div class="tg">
+      <span class="tl">Nom du niveau</span>
+      <div class="br">
+        <input type="text" id="levelName" value="mon-niveau" style="width:130px">
+        <button class="success" onclick="saveLevel()">💾 Sauver</button>
+        <button onclick="downloadLevel()">⬇ JSON</button>
+      </div>
+    </div>
+
+    <!-- Import -->
+    <div class="tg">
+      <span class="tl">Importer</span>
+      <div class="br">
+        <label style="cursor:pointer">
+          <button onclick="this.closest('label').querySelector('input').click()">📂 Charger JSON</button>
+          <input type="file" accept=".json" id="fileInput" style="display:none" onchange="importJSON(event)">
+        </label>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="tg">
+      <span class="tl">Actions</span>
+      <div class="br">
+        <button class="danger" onclick="clearLevel()">🗑 Vider</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Canvas + boutons de navigation -->
+  <div id="canvasWrap">
+    <button class="nav-btn" id="navUp"    onclick="editor.scrollUp()"   title="Monter (↑)">▲</button>
+    <button class="nav-btn" id="navDown"  onclick="editor.scrollDown()" title="Descendre (↓)">▼</button>
+    <button class="nav-btn" id="navLeft"  onclick="editor.scrollLeft()" title="Gauche (←)">◀</button>
+    <button class="nav-btn" id="navRight" onclick="editor.scrollRight()" title="Droite (→)">▶</button>
+    <!-- Largeur = LEFT_PAD + COLS_VIS*CELL + 16, Hauteur = TOP_PAD + ROWS_VIS*CELL + 30 -->
+    <canvas id="editorCanvas" width="876" height="490"></canvas>
+  </div>
+
+  <div id="statusBar">
+    <span id="statusText">0 tiles</span>
+    <span>↑↓←→ ou flèches | Molette = scroll | Shift+Molette = horiz | Clic droit = effacer</span>
+  </div>
+
+  <div id="legend">
+    <div class="leg"><span class="leg-icon" style="background:#2244bb;border:1px solid rgba(100,150,255,.5)"></span> Bloc</div>
+    <div class="leg"><span class="leg-icon" style="background:linear-gradient(180deg,#ff2244,#cc1133);clip-path:polygon(50% 0%,100% 100%,0% 100%)"></span> Pique ↑ (sol)</div>
+    <div class="leg"><span class="leg-icon" style="background:linear-gradient(180deg,#ff8800,#cc4400);clip-path:polygon(0% 0%,100% 0%,50% 100%)"></span> Pique ↓ (plafond)</div>
+    <span style="margin-left:8px">Row 0 = sol | Row 19 = sommet | Clic droit = effacer</span>
+  </div>
+
+  <div id="levelsPanel">
+    <h3>NIVEAUX SAUVEGARDÉS</h3>
+    <div id="levelList"><span style="color:rgba(100,120,180,.4);font-size:11px">Aucun niveau.</span></div>
+  </div>
+
+  <div class="nav-links">
+    <a href="/">← Retour au jeu</a>
+    <a href="/dashboard">Dashboard IA →</a>
+  </div>
+  <div id="toast"></div>
+
+  <script src="/js/game/constants.js"></script>
+  <script src="/js/editor/editor.js"></script>
+  <script>
+    const canvas   = document.getElementById('editorCanvas');
+    const statusEl = document.getElementById('statusText');
+    const editor   = new LevelEditor(canvas, statusEl);
+
+    // Touches clavier globales
+    document.addEventListener('keydown', e => {
+      // Eviter de capturer quand on tape dans un input
+      if (document.activeElement.tagName === 'INPUT') return;
+      if (e.code === 'ArrowRight') { e.preventDefault(); editor.scrollRight(); }
+      if (e.code === 'ArrowLeft')  { e.preventDefault(); editor.scrollLeft(); }
+      if (e.code === 'ArrowUp')    { e.preventDefault(); editor.scrollUp(); }
+      if (e.code === 'ArrowDown')  { e.preventDefault(); editor.scrollDown(); }
+    });
+
+    function setTool(t) {
+      editor.tool = t;
+      ['tBlock','tSpike','tSpikeInv','tErase'].forEach(id => {
+        document.getElementById(id).classList.remove('active');
+      });
+      const map = { block:'tBlock', spike:'tSpike', spike_inv:'tSpikeInv', erase:'tErase' };
+      document.getElementById(map[t]).classList.add('active');
+    }
+
+    async function saveLevel() {
+      editor.levelName = document.getElementById('levelName').value.trim() || 'mon-niveau';
+      const ok = await editor.saveToServer();
+      if (ok) { toast(`✓ "${editor.levelName}" sauvegardé !`); loadLevelList(); }
+      else     toast('✗ Erreur de sauvegarde.');
+    }
+
+    function downloadLevel() {
+      editor.levelName = document.getElementById('levelName').value.trim() || 'mon-niveau';
+      editor.downloadJSON(); toast('JSON téléchargé.');
+    }
+
+    function importJSON(e) {
+      const file = e.target.files[0]; if (!file) return;
+      const r = new FileReader();
+      r.onload = ev => {
+        try {
+          const d = JSON.parse(ev.target.result);
+          editor.loadTiles(d.tiles || []);
+          if (d.name) document.getElementById('levelName').value = d.name;
+          toast(`"${d.name}" importé (${(d.tiles||[]).length} tiles).`);
+        } catch { toast('✗ JSON invalide.'); }
+      };
+      r.readAsText(file); e.target.value = '';
+    }
+
+    function clearLevel() {
+      if (!confirm('Vider le niveau ?')) return;
+      editor.clear(); toast('Niveau vidé.');
+    }
+
+    async function loadLevelList() {
+      try {
+        const d    = await (await fetch('/api/levels')).json();
+        const list = document.getElementById('levelList');
+        if (!d.levels?.length) {
+          list.innerHTML = '<span style="color:rgba(100,120,180,.4);font-size:11px">Aucun niveau.</span>';
+          return;
+        }
+        list.innerHTML = '';
+        for (const lvl of d.levels) {
+          const chip = document.createElement('div'); chip.className = 'lchip';
+          chip.innerHTML = `<span>${lvl.name}</span><small style="color:rgba(100,130,200,.5)">${lvl.tileCount} tiles</small><span class="del" title="Supprimer" onclick="delLevel('${lvl.name}',event)">✕</span>`;
+          chip.addEventListener('click', ev => { if (ev.target.classList.contains('del')) return; loadFromServer(lvl.name); });
+          list.appendChild(chip);
+        }
+      } catch {}
+    }
+
+    async function loadFromServer(name) {
+      const d = await (await fetch(`/api/levels/${encodeURIComponent(name)}`)).json();
+      editor.loadTiles(d.tiles);
+      document.getElementById('levelName').value = d.name;
+      toast(`"${d.name}" chargé (${d.tiles.length} tiles).`);
+    }
+
+    async function delLevel(name, e) {
+      e.stopPropagation();
+      if (!confirm(`Supprimer "${name}" ?`)) return;
+      await fetch(`/api/levels/${encodeURIComponent(name)}`, { method:'DELETE' });
+      loadLevelList(); toast(`"${name}" supprimé.`);
+    }
+
+    let toastT = null;
+    function toast(msg) {
+      const el = document.getElementById('toast');
+      el.textContent = msg; el.classList.add('show');
+      clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('show'), 2500);
+    }
+
+    loadLevelList();
+  </script>
+</body>
+</html>

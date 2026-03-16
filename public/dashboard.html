@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>GD AI — Dashboard</title>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+	<style>
+		*,
+		*::before,
+		*::after {
+			box-sizing: border-box;
+			margin: 0;
+			padding: 0
+		}
+
+		:root {
+			--bg: #04040f;
+			--bg2: #08081c;
+			--bg3: #0e0e28;
+			--border: rgba(68, 100, 200, .25);
+			--accent: #44aaff;
+			--green: #44ffaa;
+			--red: #ff4466;
+			--orange: #ff8844;
+			--text: #c8d8ff;
+			--muted: rgba(150, 170, 220, .5);
+			--font: 'Courier New', monospace
+		}
+
+		html,
+		body {
+			height: 100%
+		}
+
+		body {
+			background: var(--bg);
+			color: var(--text);
+			font-family: var(--font);
+			display: flex;
+			flex-direction: column;
+			min-height: 100vh
+		}
+
+		header {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			padding: 12px 24px;
+			border-bottom: 1px solid var(--border);
+			background: rgba(4, 4, 20, .95);
+			position: sticky;
+			top: 0;
+			z-index: 100
+		}
+
+		header h1 {
+			font-size: .8rem;
+			letter-spacing: 5px;
+			color: var(--accent);
+			text-shadow: 0 0 10px rgba(68, 170, 255, .5)
+		}
+
+		.hlinks {
+			display: flex;
+			gap: 16px
+		}
+
+		.hlinks a {
+			font-size: 10px;
+			color: var(--muted);
+			text-decoration: none;
+			letter-spacing: 2px;
+			border-bottom: 1px solid var(--border);
+			transition: color .2s
+		}
+
+		.hlinks a:hover {
+			color: var(--accent)
+		}
+
+		main {
+			display: grid;
+			grid-template-columns: 320px 1fr;
+			flex: 1;
+			overflow: hidden
+		}
+
+		#lp {
+			border-right: 1px solid var(--border);
+			display: flex;
+			flex-direction: column;
+			overflow: hidden
+		}
+
+		.sec {
+			padding: 14px 16px;
+			border-bottom: 1px solid var(--border);
+			background: var(--bg2)
+		}
+
+		.sec-title {
+			font-size: 9px;
+			letter-spacing: 3px;
+			color: var(--muted);
+			margin-bottom: 10px;
+			text-transform: uppercase
+		}
+
+		.pr {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			margin-bottom: 7px;
+			font-size: 11px
+		}
+
+		.pr label {
+			color: var(--muted);
+			min-width: 105px
+		}
+
+		.pr input,
+		.pr select {
+			background: rgba(10, 15, 40, .8);
+			color: var(--accent);
+			border: 1px solid var(--border);
+			border-radius: 3px;
+			padding: 3px 7px;
+			font-family: var(--font);
+			font-size: 11px;
+			width: 90px
+		}
+
+		.pr select {
+			cursor: pointer;
+			width: auto;
+			min-width: 90px
+		}
+
+		.pr select option {
+			background: #0d0d2e
+		}
+
+		.btn {
+			padding: 8px;
+			width: 100%;
+			margin-top: 7px;
+			background: rgba(20, 60, 150, .7);
+			border: 1px solid var(--accent);
+			border-radius: 4px;
+			color: #fff;
+			font-family: var(--font);
+			font-size: 11px;
+			cursor: pointer;
+			letter-spacing: 2px;
+			transition: all .15s
+		}
+
+		.btn:hover {
+			background: rgba(30, 80, 200, .9);
+			box-shadow: 0 0 12px rgba(68, 170, 255, .3)
+		}
+
+		.btn.stop {
+			background: rgba(60, 10, 20, .8);
+			border-color: var(--red);
+			color: var(--red)
+		}
+
+		.brow {
+			display: flex;
+			gap: 5px;
+			margin-top: 5px
+		}
+
+		.bsm {
+			flex: 1;
+			padding: 5px;
+			background: rgba(10, 15, 40, .7);
+			border: 1px solid var(--border);
+			border-radius: 3px;
+			color: var(--muted);
+			font-family: var(--font);
+			font-size: 10px;
+			cursor: pointer;
+			transition: all .15s
+		}
+
+		.bsm:hover {
+			border-color: var(--accent);
+			color: var(--text)
+		}
+
+		.bsm.active {
+			border-color: var(--green);
+			color: var(--green)
+		}
+
+		.sgrid {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 7px;
+			margin-top: 8px
+		}
+
+		.sc {
+			background: var(--bg3);
+			border: 1px solid var(--border);
+			border-radius: 4px;
+			padding: 8px 10px
+		}
+
+		.sc .v {
+			font-size: 17px;
+			font-weight: bold;
+			color: var(--accent);
+			display: block;
+			line-height: 1
+		}
+
+		.sc .l {
+			font-size: 9px;
+			color: var(--muted);
+			letter-spacing: 2px;
+			margin-top: 3px;
+			display: block
+		}
+
+		.sc.g .v {
+			color: var(--green)
+		}
+
+		.sc.o .v {
+			color: var(--orange)
+		}
+
+		#cw {
+			flex: 1;
+			overflow-y: auto;
+			padding: 10px 14px;
+			background: var(--bg)
+		}
+
+		.ctitle {
+			font-size: 9px;
+			letter-spacing: 3px;
+			color: var(--muted);
+			margin-bottom: 6px;
+			position: sticky;
+			top: 0;
+			background: var(--bg);
+			padding: 4px 0
+		}
+
+		#log {
+			font-size: 10px;
+			line-height: 1.65
+		}
+
+		.ll {
+			color: var(--muted)
+		}
+
+		.ll.g {
+			color: var(--green)
+		}
+
+		.ll.i {
+			color: var(--accent)
+		}
+
+		.ll.w {
+			color: var(--orange)
+		}
+
+		#rp {
+			padding: 14px 20px;
+			border-bottom: 1px solid var(--border);
+			background: var(--bg2)
+		}
+
+		#rp h2 {
+			font-size: 9px;
+			letter-spacing: 3px;
+			color: var(--muted);
+			margin-bottom: 10px
+		}
+
+		#fc {
+			max-height: 190px
+		}
+
+		#tp {
+			padding: 0 20px 16px;
+			overflow-y: auto
+		}
+
+		#tp h2 {
+			font-size: 9px;
+			letter-spacing: 3px;
+			color: var(--muted);
+			padding: 12px 0 8px;
+			position: sticky;
+			top: 0;
+			background: var(--bg);
+			z-index: 10;
+			border-bottom: 1px solid var(--border)
+		}
+
+		table {
+			width: 100%;
+			border-collapse: collapse;
+			font-size: 11px
+		}
+
+		th {
+			text-align: left;
+			padding: 5px 8px;
+			color: var(--muted);
+			font-size: 9px;
+			letter-spacing: 2px;
+			border-bottom: 1px solid var(--border);
+			position: sticky;
+			top: 28px;
+			background: var(--bg)
+		}
+
+		td {
+			padding: 5px 8px;
+			border-bottom: 1px solid rgba(68, 100, 200, .08)
+		}
+
+		tr {
+			cursor: pointer;
+			transition: background .1s
+		}
+
+		tr:hover td {
+			background: rgba(30, 50, 130, .3)
+		}
+
+		tr.sel td {
+			background: rgba(20, 60, 180, .35)
+		}
+
+		tr.sel td:first-child {
+			border-left: 2px solid var(--accent)
+		}
+
+		.bar {
+			display: inline-block;
+			height: 5px;
+			border-radius: 2px;
+			background: linear-gradient(90deg, #2244aa, var(--accent));
+			margin-left: 4px;
+			vertical-align: middle;
+			opacity: .7
+		}
+
+		.badge {
+			display: inline-block;
+			padding: 1px 5px;
+			border-radius: 2px;
+			font-size: 9px;
+			background: rgba(68, 170, 255, .1);
+			color: var(--accent);
+			border: 1px solid rgba(68, 170, 255, .2)
+		}
+
+		.badge.nb {
+			background: rgba(68, 255, 170, .1);
+			color: var(--green);
+			border-color: rgba(68, 255, 170, .25)
+		}
+
+		#repanel {
+			position: fixed;
+			bottom: 0;
+			left: 0;
+			right: 0;
+			background: rgba(4, 4, 20, .97);
+			border-top: 1px solid var(--border);
+			padding: 10px 20px;
+			display: flex;
+			align-items: center;
+			gap: 14px;
+			transform: translateY(100%);
+			transition: transform .3s;
+			z-index: 200
+		}
+
+		#repanel.on {
+			transform: translateY(0)
+		}
+
+		#repanel .ri {
+			flex: 1;
+			font-size: 11px;
+			color: var(--muted)
+		}
+
+		#repanel .ri strong {
+			color: var(--text)
+		}
+
+		#btnGo {
+			padding: 8px 16px;
+			background: rgba(30, 80, 200, .8);
+			border: 1px solid var(--accent);
+			border-radius: 4px;
+			color: #fff;
+			font-family: var(--font);
+			font-size: 11px;
+			cursor: pointer;
+			letter-spacing: 2px;
+			transition: all .15s;
+			text-decoration: none;
+			white-space: nowrap
+		}
+
+		#btnGo:hover {
+			box-shadow: 0 0 14px rgba(68, 170, 255, .4)
+		}
+
+		#btnClRe {
+			background: none;
+			border: none;
+			color: var(--muted);
+			font-size: 18px;
+			cursor: pointer;
+			padding: 0 4px
+		}
+
+		#btnClRe:hover {
+			color: var(--red)
+		}
+
+		::-webkit-scrollbar {
+			width: 4px
+		}
+
+		::-webkit-scrollbar-track {
+			background: var(--bg)
+		}
+
+		::-webkit-scrollbar-thumb {
+			background: rgba(68, 100, 200, .4);
+			border-radius: 2px
+		}
+	</style>
+</head>
+
+<body>
+
+	<header>
+		<h1>GEOMETRY DASH AI — DASHBOARD</h1>
+		<div class="hlinks">
+			<a href="/">← Jeu</a>
+			<a href="/editor">Éditeur</a>
+			<a href="#" onclick="clearHist();return false">Effacer</a>
+		</div>
+	</header>
+
+	<main>
+		<div id="lp">
+			<div class="sec">
+				<div class="sec-title">Paramètres de l'AG</div>
+				<div class="pr">
+					<label for="cfgPop">Population</label><input type="number" id="cfgPop" value="1000" min="10" max="2000">
+				</div>
+				<div class="pr">
+					<label for="cfgElit">Élites gardés</label><input type="number" id="cfgElit" value="50" min="1" max="50">
+				</div>
+				<div class="pr">
+					<label for="cfgMaxG">Max générations</label><input type="number" id="cfgMaxG" value="500" min="10" max="5000">
+				</div>
+				<div class="pr"><label>Niveau</label>
+					<select id="cfgLvl" style="min-width:130px">
+						<option value="">— Choisir un niveau —</option>
+					</select>
+				</div>
+				<button class="btn" id="btnSS" onclick="toggleGA()">▶ DÉMARRER L'AG</button>
+				<div class="brow">
+					<button class="bsm" id="btnPause" onclick="togglePause()">⏸ Pause</button>
+					<button class="bsm" id="btnRepB" onclick="replayBest()">👁 Meilleur</button>
+					<button class="bsm" onclick="loadHistFromServer()">↻ Charger</button>
+				</div>
+			</div>
+
+			<div class="sec">
+				<div class="sec-title">Statistiques</div>
+				<div class="sgrid">
+					<div class="sc"><span class="v" id="sGen">—</span><span class="l">GÉNÉRATION</span></div>
+					<div class="sc g"><span class="v" id="sBest">—</span><span class="l">MEILLEUR (blocs)</span></div>
+					<div class="sc"><span class="v" id="sAvg">—</span><span class="l">MOYENNE</span></div>
+					<div class="sc o"><span class="v" id="sAtt">0</span><span class="l">ESSAIS TOTAL</span></div>
+				</div>
+			</div>
+
+			<div id="cw">
+				<div class="ctitle">JOURNAL</div>
+				<div id="log"></div>
+			</div>
+		</div>
+
+		<div style="display:flex;flex-direction:column;overflow:hidden">
+			<div id="rp">
+				<h2>ÉVOLUTION DE LA FITNESS</h2>
+				<canvas id="fc"></canvas>
+			</div>
+			<div id="tp">
+				<h2>HISTORIQUE DES GÉNÉRATIONS — cliquer pour rejouer</h2>
+				<table>
+					<thead>
+						<tr>
+							<th>GÉN.</th>
+							<th>MEILLEUR</th>
+							<th>MOYENNE</th>
+							<th>PIRE</th>
+							<th>PROGRÈS</th>
+							<th></th>
+						</tr>
+					</thead>
+					<tbody id="tBody"></tbody>
+				</table>
+			</div>
+		</div>
+	</main>
+
+	<!-- Replay bar -->
+	<div id="repanel">
+		<div class="ri">
+			Génération <strong id="rpGen">—</strong> &nbsp;|&nbsp;
+			Fitness : <strong id="rpFit">—</strong> blocs &nbsp;|&nbsp;
+			<span id="rpD" style="font-size:9px;color:rgba(150,170,220,.4)">—</span>
+		</div>
+		<button id="btnGo" onclick="goReplay()">▶ REJOUER DANS LE JEU</button>
+		<button id="btnClRe" onclick="closeReplay()">✕</button>
+	</div>
+
+	<script src="/js/game/constants.js"></script>
+	<script src="/js/game/player.js"></script>
+	<script src="/js/game/level.js"></script>
+	<script src="/js/ai/genome.js"></script>
+	<script src="/js/ai/ai-controller.js"></script>
+	<script src="/js/ai/simulator.js"></script>
+	<script src="/js/ai/genetic-algorithm.js"></script>
+	<script src="/js/ai/ga-manager.js"></script>
+
+	<script>
+		// ── Chart ────────────────────────────────────────────────────────────────────
+		const chart = new Chart(document.getElementById('fc').getContext('2d'), {
+			type: 'line',
+			data: {
+				labels: [],
+				datasets: [
+					{ label: 'Meilleur', data: [], borderColor: '#44ffaa', backgroundColor: 'rgba(68,255,170,.07)', fill: true, tension: .35, pointRadius: 1.5, borderWidth: 2 },
+					{ label: 'Moyenne', data: [], borderColor: '#44aaff', backgroundColor: 'transparent', fill: false, tension: .35, pointRadius: 1, borderWidth: 1.5, borderDash: [4, 4] },
+					{ label: 'Pire', data: [], borderColor: 'rgba(255,100,100,.3)', backgroundColor: 'transparent', fill: false, tension: .35, pointRadius: 0, borderWidth: 1, borderDash: [2, 6] },
+				]
+			},
+			options: {
+				responsive: true, maintainAspectRatio: true, animation: { duration: 0 },
+				plugins: {
+					legend: { labels: { color: 'rgba(150,170,220,.7)', font: { family: 'Courier New', size: 10 } } },
+					tooltip: {
+						backgroundColor: 'rgba(8,8,28,.9)', borderColor: 'rgba(68,100,200,.4)', borderWidth: 1,
+						titleFont: { family: 'Courier New', size: 10 }, bodyFont: { family: 'Courier New', size: 10 },
+						callbacks: { label: (c) => ` ${c.dataset.label}: ${c.parsed.y.toFixed(1)} blocs` }
+					}
+				},
+				scales: {
+					x: { ticks: { color: 'rgba(150,170,220,.4)', font: { size: 9 } }, grid: { color: 'rgba(68,100,200,.07)' } },
+					y: { ticks: { color: 'rgba(150,170,220,.4)', font: { size: 9 } }, grid: { color: 'rgba(68,100,200,.07)' }, min: 0 }
+				}
+			}
+		});
+
+		// ── State ────────────────────────────────────────────────────────────────────
+		let gam = null, running = false, paused = false;
+		let allRows = [], prevBest = 0;
+		let selGenome = null, selGen = null, selFit = null;
+		let levelData = null;  // niveau courant — accessible depuis goReplay()
+
+		// ── GA ───────────────────────────────────────────────────────────────────────
+		function toggleGA() {
+			running ? stopGA() : startGA();
+		}
+		async function startGA() {
+			const pop = parseInt(document.getElementById('cfgPop').value) || 200;
+			const elite = parseInt(document.getElementById('cfgElit').value) || 5;
+			const maxG = parseInt(document.getElementById('cfgMaxG').value) || 300;
+			const spd = 1.0;
+			const lvl = document.getElementById('cfgLvl').value;
+
+			let _levelData;
+			if (lvl.startsWith('custom:')) {
+				const name = lvl.slice(7);
+				const r = await fetch('/api/levels/' + encodeURIComponent(name));
+				const d = await r.json();
+				_levelData = { tiles: d.tiles, name: d.name };
+			}
+			else {
+				addLog('⚠ Aucun niveau sélectionné. Veuillez choisir un niveau dans la liste.');
+				return;
+			}
+			levelData = _levelData;  // mise à jour de la variable globale
+
+			allRows = []; prevBest = 0;
+			document.getElementById('tBody').innerHTML = '';
+			chart.data.labels = [];
+			chart.data.datasets.forEach(ds => ds.data = []);
+			chart.update('none');
+			document.getElementById('log').innerHTML = '';
+
+			gam = new GAManager({
+				onGeneration: onGen,
+				onDone: onDone,
+				onLog: m => addLog(m)
+			});
+			gam.start(levelData, { populationSize: pop, eliteCount: elite, maxGenerations: maxG }, spd);
+			running = true; paused = false;
+			document.getElementById('btnSS').textContent = '⏹ ARRÊTER L\'AG';
+			document.getElementById('btnSS').classList.add('stop');
+		}
+		function stopGA() {
+			if (gam) gam.stop();
+			running = false; paused = false;
+			document.getElementById('btnSS').textContent = '▶ DÉMARRER L\'AG';
+			document.getElementById('btnSS').classList.remove('stop');
+			addLog('⏹ AG arrêté.', 'w');
+		}
+		function togglePause() {
+			if (!running) return;
+			if (paused) { gam.resume(); paused = false; document.getElementById('btnPause').textContent = '⏸ Pause'; document.getElementById('btnPause').classList.remove('active'); }
+			else { gam.pause(); paused = true; document.getElementById('btnPause').textContent = '▶ Reprendre'; document.getElementById('btnPause').classList.add('active'); }
+		}
+
+		// ── Callbacks ────────────────────────────────────────────────────────────────
+		function onGen(entry, hist) {
+			const { gen, best, avg, worst } = entry;
+			document.getElementById('sGen').textContent = gen;
+			document.getElementById('sBest').textContent = best.toFixed(1);
+			document.getElementById('sAvg').textContent = avg.toFixed(1);
+			document.getElementById('sAtt').textContent = fmtN(gam.totalAttempts);
+
+			chart.data.labels.push(gen);
+			chart.data.datasets[0].data.push(best);
+			chart.data.datasets[1].data.push(avg);
+			chart.data.datasets[2].data.push(worst);
+			if (chart.data.labels.length > 400) { chart.data.labels.shift(); chart.data.datasets.forEach(d => d.data.shift()); }
+			chart.update('none');
+
+			const nb = best > prevBest;
+			if (nb) prevBest = best;
+			allRows.push({ gen, best, avg, worst, genome: entry.bestGenome, nb });
+			addTableRow({ gen, best, avg, worst, genome: entry.bestGenome, nb });
+			if (gen % 5 === 0 || nb) addLog(`Gen ${gen} | best=${best.toFixed(1)} avg=${avg.toFixed(1)}${nb ? ' ★ RECORD' : ''}`, nb ? 'g' : '');
+		}
+
+		function onDone(reason, gen) {
+			running = false; paused = false;
+			document.getElementById('btnSS').textContent = '▶ DÉMARRER L\'AG';
+			document.getElementById('btnSS').classList.remove('stop');
+			const msgs = { solved: `🏆 Résolu à la génération ${gen}!`, max_generations: '🏁 Max générations atteint.', stopped: '⏹ Arrêté.' };
+			addLog(msgs[reason] || `Done: ${reason}`, 'i');
+		}
+
+		// ── Table ────────────────────────────────────────────────────────────────────
+		function addTableRow({ gen, best, avg, worst, genome, nb }) {
+			const pct = Math.min(100, (best / 300) * 100);
+			const tr = document.createElement('tr');
+			tr.innerHTML = `
+    <td>${gen}</td>
+    <td>${best.toFixed(1)} <span class="bar" style="width:${pct}px"></span></td>
+    <td>${avg.toFixed(1)}</td>
+    <td>${worst.toFixed(1)}</td>
+    <td>${pct.toFixed(0)}%</td>
+    <td>${nb ? '<span class="badge nb">★ record</span>' : ''}</td>`;
+			tr.addEventListener('click', () => selectRow(tr, { gen, best, genome }));
+			document.getElementById('tBody').appendChild(tr);
+			// Auto-scroll
+			tr.scrollIntoView({ block: 'nearest' });
+		}
+
+		function selectRow(tr, data) {
+			document.querySelectorAll('#tBody tr').forEach(r => r.classList.remove('sel'));
+			tr.classList.add('sel');
+			selGenome = data.genome;
+			selGen = data.gen;
+			selFit = data.best;
+			showReplayBar(data.gen, data.best, data.genome);
+		}
+
+		// ── Replay bar ────────────────────────────────────────────────────────────────
+		function showReplayBar(gen, fit, genome) {
+			document.getElementById('rpGen').textContent = gen;
+			document.getElementById('rpFit').textContent = fit.toFixed(1);
+			document.getElementById('rpD').textContent = genome.describe ? genome.describe().slice(0, 60) + '…' : '';
+			document.getElementById('repanel').classList.add('on');
+		}
+		function closeReplay() { document.getElementById('repanel').classList.remove('on'); }
+
+		function goReplay() {
+			if (!selGenome) return;
+			try {
+				sessionStorage.setItem('replayGenome', JSON.stringify(selGenome.serialize ? selGenome.serialize() : selGenome));
+				sessionStorage.setItem('replayGen', selGen);
+				sessionStorage.setItem('replayFit', selFit);
+				// Transmettre aussi le niveau pour rejouer sur le bon niveau
+				if (levelData) sessionStorage.setItem('replayLevelData', JSON.stringify(levelData));
+			} catch (e) { }
+			window.open('/', '_blank');
+		}
+
+		function replayBest() {
+			if (!gam || !gam.getBestGenome()) { addLog('Pas encore de meilleur génome.', 'w'); return; }
+			const g = gam.getBestGenome();
+			selGenome = g; selGen = '?'; selFit = g.fitness;
+			showReplayBar('meilleur', g.fitness, g);
+		}
+
+		// ── Historique serveur ────────────────────────────────────────────────────────
+		async function loadHistFromServer() {
+			addLog('Chargement historique serveur…', 'i');
+			const rows = await GAManager.fetchHistory();
+			if (!rows.length) { addLog('Aucune donnée sur le serveur.', 'w'); return; }
+
+			allRows = []; prevBest = 0;
+			document.getElementById('tBody').innerHTML = '';
+			chart.data.labels = [];
+			chart.data.datasets.forEach(d => d.data = []);
+
+			for (const r of rows) {
+				const gen = r.generationNumber;
+				const best = r.bestFitness;
+				const avg = r.avgFitness ?? 0;
+				const genome = r.bestGenome ? Genome.deserialize(r.bestGenome) : null;
+				const nb = best > prevBest;
+				if (nb) prevBest = best;
+				allRows.push({ gen, best, avg, worst: 0, genome, nb });
+				addTableRow({ gen, best, avg, worst: 0, genome, nb });
+
+				chart.data.labels.push(gen);
+				chart.data.datasets[0].data.push(best);
+				chart.data.datasets[1].data.push(avg);
+				chart.data.datasets[2].data.push(0);
+			}
+			chart.update('none');
+			addLog(`${rows.length} générations chargées.`, 'g');
+			document.getElementById('sBest').textContent = prevBest.toFixed(1);
+			document.getElementById('sGen').textContent = allRows[allRows.length - 1]?.gen ?? '—';
+		}
+
+		async function clearHist() {
+			if (!confirm('Effacer tout l\'historique serveur ?')) return;
+			await GAManager.clearHistory();
+			addLog('Historique effacé.', 'w');
+			document.getElementById('tBody').innerHTML = '';
+			chart.data.labels = [];
+			chart.data.datasets.forEach(d => d.data = []);
+			chart.update('none');
+		}
+
+		// ── Niveaux custom ────────────────────────────────────────────────────────────
+		async function loadLevelList() {
+			try {
+				const r = await fetch('/api/levels');
+				const d = await r.json();
+				const s = document.getElementById('cfgLvl');
+				[...s.options].filter(o => o.dataset.custom).forEach(o => o.remove());
+				for (const l of d.levels || []) {
+					const o = new Option(`✏ ${l.name}`, `custom:${l.name}`);
+					o.dataset.custom = '1'; s.add(o);
+				}
+			} catch { }
+		}
+
+		// ── Utils ─────────────────────────────────────────────────────────────────────
+		function addLog(msg, cls = '') {
+			const el = document.createElement('div');
+			el.className = 'll ' + cls;
+			el.textContent = '› ' + msg;
+			const log = document.getElementById('log');
+			log.appendChild(el);
+			if (log.children.length > 200) log.removeChild(log.firstChild);
+			document.getElementById('cw').scrollTop = 99999;
+		}
+		function fmtN(n) { return n >= 1000 ? (n / 1000).toFixed(1) + 'k' : String(n); }
+
+		// ── Init ──────────────────────────────────────────────────────────────────────
+		loadLevelList();
+		loadHistFromServer();
+
+		// ── Réception du génome depuis index.html (retour replay) ────────────────────
+		// (Lecture uniquement pour affichage, le replay se fait via index.html)
+	</script>
+</body>
+
+</html>

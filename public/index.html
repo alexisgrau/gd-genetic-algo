@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>GD AI</title>
+	<style>
+		*,
+		*::before,
+		*::after {
+			box-sizing: border-box;
+			margin: 0;
+			padding: 0;
+		}
+
+		body {
+			background: #040411;
+			color: #c8d8ff;
+			font-family: 'Courier New', monospace;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			min-height: 100vh;
+			user-select: none;
+		}
+
+		h1 {
+			font-size: 1.1rem;
+			letter-spacing: 4px;
+			color: #44aaff;
+			margin-bottom: 14px;
+			text-shadow: 0 0 12px #2266ff;
+		}
+
+		#gameCanvas {
+			border: 1px solid rgba(68, 170, 255, 0.25);
+			border-radius: 4px;
+			display: block;
+			box-shadow: 0 0 30px rgba(68, 100, 255, .15), 0 0 60px rgba(68, 100, 255, .08);
+			cursor: pointer;
+		}
+
+		#controls {
+			display: flex;
+			gap: 10px;
+			margin-top: 12px;
+			flex-wrap: wrap;
+			justify-content: center;
+		}
+
+		.ctrl-group {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			gap: 5px;
+		}
+
+		.ctrl-label {
+			font-size: 9px;
+			color: rgba(150, 170, 220, .65);
+			letter-spacing: 2px;
+		}
+
+		.btn-row {
+			display: flex;
+			gap: 5px;
+		}
+
+		button {
+			background: rgba(30, 40, 90, .8);
+			color: #88aaff;
+			border: 1px solid rgba(68, 100, 200, .4);
+			border-radius: 4px;
+			padding: 5px 12px;
+			font-family: 'Courier New', monospace;
+			font-size: 11px;
+			cursor: pointer;
+			transition: all .15s;
+			letter-spacing: 1px;
+		}
+
+		button:hover {
+			background: rgba(50, 70, 150, .9);
+			border-color: rgba(100, 160, 255, .7);
+			color: #ccddff;
+		}
+
+		button.active {
+			background: rgba(30, 80, 180, .9);
+			border-color: #44aaff;
+			color: #fff;
+			box-shadow: 0 0 10px rgba(68, 170, 255, .4);
+		}
+
+		button.ai-on {
+			background: rgba(10, 60, 30, .9);
+			border-color: #44ffaa;
+			color: #44ffaa;
+		}
+
+		button.ai-on:hover {
+			box-shadow: 0 0 12px rgba(68, 255, 170, .4);
+		}
+
+		input[type="number"],
+		select {
+			background: rgba(20, 30, 70, .8);
+			color: #88aaff;
+			border: 1px solid rgba(68, 100, 200, .4);
+			border-radius: 4px;
+			padding: 5px 8px;
+			font-family: 'Courier New', monospace;
+			font-size: 11px;
+		}
+
+		select {
+			cursor: pointer;
+			min-width: 130px;
+		}
+
+		select option {
+			background: #0d0d2e;
+		}
+
+		#hint {
+			margin-top: 8px;
+			font-size: 10px;
+			color: rgba(150, 170, 220, .45);
+			letter-spacing: 1px;
+		}
+
+		.nav-links {
+			display: flex;
+			gap: 16px;
+			margin-top: 14px;
+		}
+
+		.nav-links a {
+			font-size: 10px;
+			color: rgba(100, 150, 255, .55);
+			text-decoration: none;
+			letter-spacing: 2px;
+			border-bottom: 1px solid rgba(100, 150, 255, .2);
+			transition: color .2s;
+		}
+
+		.nav-links a:hover {
+			color: #88aaff;
+		}
+
+		#aiInfo {
+			display: none;
+			margin-top: 6px;
+			font-size: 10px;
+			color: rgba(68, 255, 170, .6);
+			letter-spacing: 1px;
+		}
+	</style>
+</head>
+
+<body>
+
+	<h1>⬡ GEOMETRY DASH AI</h1>
+	<canvas id="gameCanvas" width="900" height="500"></canvas>
+
+	<div id="controls">
+
+		<!-- Niveau -->
+		<div class="ctrl-group">
+			<span class="ctrl-label">Niveau</span>
+			<div class="btn-row">
+				<select id="levelSelect" onchange="onLevelChange()">
+					<option value="">— Choisir un niveau —</option>
+				</select>
+			</div>
+		</div>
+
+		<!-- IA -->
+		<div class="ctrl-group">
+			<span class="ctrl-label">IA</span>
+			<div class="btn-row">
+				<button id="btnAI" onclick="toggleAI()">▶ Activer IA</button>
+				<button id="btnOverlay" onclick="toggleOverlay()" title="Afficher/masquer la grille de vision">👁
+					Overlay</button>
+				<button onclick="restartEngine()">↺ Reset</button>
+			</div>
+		</div>
+
+	</div>
+
+	<p id="aiInfo">IA active — génome aléatoire | <span id="aiDesc">—</span></p>
+	<p id="hint">ESPACE / CLIC → Sauter</p>
+
+	<div class="nav-links">
+		<a href="/editor">Éditeur de niveaux</a>
+		<a href="/dashboard">Dashboard IA</a>
+	</div>
+
+	<!-- Scripts jeu -->
+	<script src="/js/game/constants.js"></script>
+	<script src="/js/game/player.js"></script>
+	<script src="/js/game/level.js"></script>
+	<script src="/js/game/renderer.js"></script>
+	<script src="/js/game/engine.js"></script>
+	<!-- Scripts IA -->
+	<script src="/js/ai/genome.js"></script>
+	<script src="/js/ai/ai-controller.js"></script>
+
+	<script>
+		const canvas = document.getElementById('gameCanvas');
+		let engine = null;
+		let currentGenome = null;
+		let aiEnabled = false;
+		let overlayOn = true;
+
+		// ── Démarrage du moteur ───────────────────────────────────────────────────
+		function startEngine(opts = {}) {
+			if (!opts.tiles) {
+				// Aucun niveau sélectionné : afficher un message et ne pas démarrer
+				if (engine) engine.stop();
+				engine = null;
+				const ctx = canvas.getContext('2d');
+				ctx.fillStyle = '#040411';
+				ctx.fillRect(0, 0, canvas.width, canvas.height);
+				ctx.fillStyle = 'rgba(100,150,255,0.4)';
+				ctx.font = '13px Courier New';
+				ctx.textAlign = 'center';
+				ctx.fillText('← Sélectionnez un niveau pour commencer', canvas.width / 2, canvas.height / 2);
+				ctx.fillStyle = 'rgba(68,100,200,0.2)';
+				ctx.font = '10px Courier New';
+				ctx.fillText('Créez un niveau dans l\'Éditeur puis revenez ici', canvas.width / 2, canvas.height / 2 + 24);
+				return;
+			}
+			if (engine) engine.stop();
+			engine = new Engine(canvas, {
+				speedMultiplier: opts.speedMult ?? getCurrentSpeed(),
+				customTiles: opts.tiles,
+				customLevelName: opts.levelName ?? null,
+				showAIOverlay: overlayOn,
+			});
+
+			if (aiEnabled && currentGenome) {
+				engine.setAI(currentGenome);
+			}
+
+			engine.start();
+		}
+
+		function getCurrentSpeed() {
+			return 1.0;
+		}
+
+		// ── Sélecteur de niveau ───────────────────────────────────────────────────
+		async function loadLevelList() {
+			try {
+				const res = await fetch('/api/levels');
+				const data = await res.json();
+				const sel = document.getElementById('levelSelect');
+				// Supprimer les options custom existantes
+				[...sel.options].filter(o => o.dataset.custom).forEach(o => o.remove());
+				for (const lvl of (data.levels || [])) {
+					const opt = new Option(`${lvl.name}`, `custom:${lvl.name}`);
+					opt.dataset.custom = '1';
+					sel.add(opt);
+				}
+			} catch { }
+		}
+
+		async function onLevelChange() {
+			const val = document.getElementById('levelSelect').value;
+			if (!val || !val.startsWith('custom:')) {
+				startEngine({});
+				return;
+			}
+			const name = val.slice(7);
+			const res = await fetch(`/api/levels/${encodeURIComponent(name)}`);
+			const data = await res.json();
+			if (engine) engine.stop();
+			engine = new Engine(canvas, {
+				speedMultiplier: getCurrentSpeed(),
+				customTiles: data.tiles,
+				customLevelName: data.name,
+				showAIOverlay: overlayOn,
+			});
+			if (aiEnabled && currentGenome) engine.setAI(currentGenome);
+			engine.start();
+		}
+
+		// ── IA ────────────────────────────────────────────────────────────────────
+		function toggleAI() {
+			aiEnabled = !aiEnabled;
+			const btn = document.getElementById('btnAI');
+
+			if (aiEnabled) {
+				// Créer un génome aléatoire de démo
+				currentGenome = Genome.random(3, 3);
+				btn.textContent = '⏹ Désactiver IA';
+				btn.classList.add('ai-on');
+				document.getElementById('aiInfo').style.display = 'block';
+				document.getElementById('aiDesc').textContent = currentGenome.describe().slice(0, 80) + '…';
+				console.log('Génome IA:\n ', currentGenome.describe());
+			}
+			else {
+				currentGenome = null;
+				btn.textContent = '▶ Activer IA';
+				btn.classList.remove('ai-on');
+				document.getElementById('aiInfo').style.display = 'none';
+			}
+
+			if (engine) engine.setAI(currentGenome);
+		}
+
+		function toggleOverlay() {
+			overlayOn = !overlayOn;
+			const btn = document.getElementById('btnOverlay');
+			btn.classList.toggle('active', overlayOn);
+			if (engine) engine.showAIOverlay = overlayOn;
+		}
+
+		function restartEngine() { onLevelChange(); }
+
+		// ── Init ──────────────────────────────────────────────────────────────────
+		document.getElementById('btnOverlay').classList.add('active');
+		startEngine({});   // affiche l'écran de sélection
+		loadLevelList();
+		// Recharger la liste si on revient de l'éditeur
+		window.addEventListener('focus', loadLevelList);
+	</script>
+
+</body>
+
+</html>
+<!-- Injection: replay depuis le dashboard -->
+<script>
+	// Détecte si on arrive depuis le dashboard avec un génome à rejouer
+	(function () {
+		try {
+			const raw = sessionStorage.getItem('replayGenome');
+			if (!raw) return;
+			sessionStorage.removeItem('replayGenome');
+			const gen = sessionStorage.getItem('replayGen') || '?';
+			const fit = parseFloat(sessionStorage.getItem('replayFit') || 0);
+			const rawLevel = sessionStorage.getItem('replayLevelData');
+			sessionStorage.removeItem('replayGen');
+			sessionStorage.removeItem('replayFit');
+			sessionStorage.removeItem('replayLevelData');
+
+			setTimeout(() => {
+				const genome = Genome.deserialize(JSON.parse(raw));
+				currentGenome = genome;
+				aiEnabled = true;
+
+				const btn = document.getElementById('btnAI');
+				btn.textContent = '⏹ Désactiver IA';
+				btn.classList.add('ai-on');
+				document.getElementById('aiInfo').style.display = 'block';
+				document.getElementById('aiDesc').textContent = `Replay Génération ${gen} — fitness=${fit.toFixed(1)} blocs`;
+
+				// Charger le bon niveau (celui utilisé pendant l'entraînement)
+				let replayOpts = {};
+				if (rawLevel) {
+					const ld = JSON.parse(rawLevel);
+					if (ld.tiles) {
+						replayOpts = { tiles: ld.tiles, levelName: ld.name };
+					}
+				}
+
+				if (!replayOpts.tiles) {
+					console.warn('Replay : aucun niveau custom disponible.');
+					return;
+				}
+
+				// Redémarrer l'engine sur le bon niveau avec le génome
+				if (engine) engine.stop();
+				engine = new Engine(canvas, {
+					speedMultiplier: getCurrentSpeed(),
+					customTiles: replayOpts.tiles,
+					customLevelName: replayOpts.levelName ?? null,
+					showAIOverlay: overlayOn,
+				});
+				engine.setAI(genome);
+				engine.start();
+
+				// Bannière replay
+				const banner = document.createElement('div');
+				banner.style.cssText = 'position:fixed;top:60px;left:50%;transform:translateX(-50%);background:rgba(8,8,28,.95);border:1px solid #44aaff;border-radius:4px;padding:8px 20px;font-family:monospace;font-size:11px;color:#44aaff;letter-spacing:2px;z-index:999;pointer-events:none';
+				banner.textContent = `REPLAY — Génération ${gen} | ${fit.toFixed(1)} blocs`;
+				document.body.appendChild(banner);
+				setTimeout(() => banner.remove(), 5000);
+			}, 100);
+		} catch (e) { console.warn('Replay init error:', e); }
+	})();
+</script>
