@@ -41,11 +41,11 @@ Genome
 │   ├─ Trigger
 │   └─ Trigger
 └─ Network
-└─ Trigger
+    ├─ Trigger
 
 ```
 
-- **Genome** : cerveau de l'IA  
+- **Genome** : cerveau de l'IA (logique OR) 
 - **Network** : ensemble de triggers (logique AND)  
 - **Trigger** : capteur détectant un type d'objet
 
@@ -60,8 +60,9 @@ Les triggers peuvent détecter :
 - présence d'air
 - présence d'un bloc
 - présence d'un pic
-
-et aussi leur absence.
+- absence d'air
+- absence d'un bloc
+- absence d'un pic
 
 ---
 
@@ -87,7 +88,7 @@ Le score d'un joueur correspond à :
 
 ```
 
-distance parcourue + bonus si le niveau est terminé
+la distance parcourue
 
 ```
 
